@@ -5,7 +5,6 @@ dirname = os.path.dirname(__file__)
 sys.path.append(os.path.join(dirname, "..", "src"))
 
 from train import train
-from hydra.experimental import compose, initialize
 
 
 def test_train():
