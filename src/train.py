@@ -15,12 +15,13 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)-15s %(message)s")
 logger = logging.getLogger(__name__)
 
 
-def train():
+def train(data_path: str, train_plot_path: str, model_path: str) -> None:
     # Load data
-    dirname = os.path.dirname(__file__)
     df = pd.read_csv(
-        os.path.join(dirname, "..", "data", "spam.csv"), encoding="ISO-8859-1"
+        os.path.join(data_path), encoding="ISO-8859-1"
     )
+
+    # Preprocessing
     df["is_spam"] = df["v1"].apply(lambda x: 1 if x == "spam" else 0)
     df.drop(columns=["Unnamed: 2", "Unnamed: 3", "Unnamed: 4", "v1"], inplace=True)
     df.rename(columns={"v2": "sentence"}, inplace=True)
@@ -31,11 +32,8 @@ def train():
     # Tokenize
     tokenizer = Tokenizer(num_words=20_000)
     tokenizer.fit_on_texts(df_train["sentence"])
-
     df_train["sequence"] = tokenizer.texts_to_sequences(df_train["sentence"])
     df_test["sequence"] = tokenizer.texts_to_sequences(df_test["sentence"])
-
-    # Padding
 
     # Check lengths before padding on train, pad and recheck
     logger.info(
@@ -69,7 +67,6 @@ def train():
     model.compile(loss="binary_crossentropy", optimizer="adam", metrics=["acc"])
 
     # Train
-
     r = model.fit(
         data_train,
         df_train["is_spam"],
@@ -77,11 +74,23 @@ def train():
         validation_data=(data_test, df_test["is_spam"]),
     )
 
+    # Generate historic plot
     plot = pd.DataFrame(r.history).plot()
     plot.get_figure().savefig(
-        os.path.join(dirname, "..", "artifacts", "training_history.png")
+        os.path.join(train_plot_path)
     )
 
+    # Save model
     logger.info(model.summary())
+    model.save(model_path)
 
-    model.save(os.path.join(dirname, "..", "artifacts", "model.h5"))
+if __name__ == "__main__":
+    dirname = os.path.dirname(__file__)
+
+    # Define paths
+    data_path = os.path.join(dirname, "..", "data", "spam.csv")
+    train_plot_path = os.path.join(dirname, "..", "artifacts", "training_history.png")
+    model_path = os.path.join(dirname, "..", "artifacts", "model.h5")
+
+    # Train model
+    train(data_path, train_plot_path, model_path)
